@@ -11,6 +11,7 @@ import com.junwenzheng.execution.engine.SimulationResult;
 import com.junwenzheng.execution.market.MarketDataReplay;
 import com.junwenzheng.execution.market.SyntheticMarketDataGenerator;
 import com.junwenzheng.execution.metrics.ExecutionMetrics;
+import com.junwenzheng.execution.metrics.LatencyBenchmark;
 import com.junwenzheng.execution.metrics.ReportWriter;
 import com.junwenzheng.execution.order.ParentOrder;
 import com.junwenzheng.execution.order.Side;
@@ -51,6 +52,7 @@ public final class App {
         List<ExecutionMetrics> metrics = ReportWriter.metrics(results);
         ReportWriter.writeCsv(Path.of("reports/execution_summary.csv"), metrics);
         ReportWriter.writeMarkdown(Path.of("reports/execution_report.md"), metrics);
+        LatencyBenchmark.run(replay, 1_000);
 
         System.out.println("Execution report written to reports/execution_report.md");
         for (ExecutionMetrics metric : metrics) {
