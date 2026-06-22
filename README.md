@@ -62,8 +62,3 @@ docs/
 - The fill model approximates liquidity constraints using reported event volume and configurable participation limits. It does not model queue position or exchange matching rules.
 - SOR is represented as a design extension in `docs/design_notes.md`; the implemented strategies focus on single-venue TWAP/VWAP/POV behaviour.
 
-## Resume positioning
-
-Suggested resume wording:
-
-> Built a Java 21 market-data replay and execution-simulation engine with TWAP, VWAP, and POV strategies, parent/child order state management, risk checks, position tracking, fill simulation, slippage/VWAP/implementation-shortfall metrics, and latency/throughput microbenchmarks.
