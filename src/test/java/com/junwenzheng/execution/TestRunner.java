@@ -10,6 +10,8 @@ import com.junwenzheng.execution.engine.SimulationResult;
 import com.junwenzheng.execution.market.MarketDataReplay;
 import com.junwenzheng.execution.market.SyntheticMarketDataGenerator;
 import com.junwenzheng.execution.metrics.ExecutionMetrics;
+import com.junwenzheng.execution.metrics.ImplementationShortfall;
+import com.junwenzheng.execution.metrics.MicrostructureDiagnostics;
 import com.junwenzheng.execution.metrics.LatencyBenchmark;
 import com.junwenzheng.execution.order.ParentOrder;
 import com.junwenzheng.execution.order.Side;
@@ -23,6 +25,9 @@ public final class TestRunner {
         MarketDataReplay replay = MarketDataReplay.fromCsv(sample);
         assertTrue(replay.events().size() == 120, "replay should load all generated rows");
         assertTrue(replay.vwap() > 0.0, "vwap should be positive");
+        MicrostructureDiagnostics diagnostics = MicrostructureDiagnostics.from(replay);
+        assertTrue(diagnostics.averageSpreadBps() > 0.0, "average spread should be positive");
+        assertTrue(diagnostics.averageEventVolume() > 0.0, "average event volume should be positive");
 
         ExecutionSimulator simulator = new ExecutionSimulator(new RiskManager(2_000, 250_000.0), new FillModel(0.12, 1.6));
         SimulationResult result = simulator.run(new ParentOrder("JPXDEMO", Side.BUY, 5_000, replay.events().getFirst().ask()), replay, new PovAlgorithm(0.10, 800));
@@ -30,6 +35,8 @@ public final class TestRunner {
         assertTrue(metrics.filledQuantity() > 0, "POV should generate fills");
         assertTrue(metrics.fillRate() > 0 && metrics.fillRate() <= 1.0, "fill rate should be bounded");
         assertTrue(metrics.averagePrice() >= replay.events().getFirst().bid(), "average price should be plausible");
+        double shortfall = ImplementationShortfall.bps(result.fills(), Side.BUY, replay.events().getFirst().ask());
+        assertTrue(Double.isFinite(shortfall), "shortfall should be finite");
 
         SimulationResult twap = simulator.run(new ParentOrder("JPXDEMO", Side.BUY, 5_000, replay.events().getFirst().ask()), replay, new TwapAlgorithm(500));
         SimulationResult vwap = simulator.run(new ParentOrder("JPXDEMO", Side.BUY, 5_000, replay.events().getFirst().ask()), replay, new VwapAlgorithm(800));
