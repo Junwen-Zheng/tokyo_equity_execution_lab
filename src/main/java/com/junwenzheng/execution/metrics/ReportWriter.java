@@ -1,6 +1,7 @@
 package com.junwenzheng.execution.metrics;
 
 import com.junwenzheng.execution.engine.SimulationResult;
+import com.junwenzheng.execution.market.MarketDataReplay;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -24,6 +25,18 @@ public final class ReportWriter {
         for (ExecutionMetrics metric : metrics) {
             sb.append(metric.toCsvRow()).append('\n');
         }
+        Files.writeString(path, sb.toString());
+    }
+
+    public static void writeMicrostructureDiagnostics(Path path, MarketDataReplay replay) throws IOException {
+        Files.createDirectories(path.getParent());
+        MicrostructureDiagnostics diagnostics = MicrostructureDiagnostics.from(replay);
+        StringBuilder sb = new StringBuilder();
+        sb.append("# Market microstructure diagnostics\n\n");
+        sb.append("These diagnostics summarize the replay tape used by all execution strategies. They are intended to make data assumptions visible before comparing algorithm performance.\n\n");
+        sb.append(diagnostics.toMarkdown()).append('\n');
+        sb.append("\n## Notes\n\n");
+        sb.append("Average spread and midpoint volatility are simple proxies for trading difficulty. A richer production analysis would add venue-level liquidity, queue position, auction periods, and fee/rebate schedules.\n");
         Files.writeString(path, sb.toString());
     }
 

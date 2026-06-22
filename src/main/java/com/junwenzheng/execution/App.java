@@ -52,6 +52,7 @@ public final class App {
         List<ExecutionMetrics> metrics = ReportWriter.metrics(results);
         ReportWriter.writeCsv(Path.of("reports/execution_summary.csv"), metrics);
         ReportWriter.writeMarkdown(Path.of("reports/execution_report.md"), metrics);
+        ReportWriter.writeMicrostructureDiagnostics(Path.of("reports/microstructure_diagnostics.md"), replay);
         LatencyBenchmark.run(replay, 1_000);
 
         System.out.println("Execution report written to reports/execution_report.md");
