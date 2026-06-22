@@ -28,6 +28,7 @@ Outputs are written to `reports/`:
 
 - `execution_summary.csv`
 - `execution_report.md`
+- `microstructure_diagnostics.md`
 - `latency_benchmark.txt`
 
 ## Repository structure
@@ -45,14 +46,14 @@ src/test/java/com/junwenzheng/execution
 scripts/
   run_demo.sh, run_tests.sh, compile.sh
 docs/
-  research_log.md, design_notes.md
+  research_log.md, design_notes.md, market_microstructure_notes.md, strategy_comparison.md
 ```
 
 ## Design principles
 
 1. **Do not fake trading expertise.** The project explains assumptions and limitations rather than claiming production-market realism.
 2. **Show engineering depth.** The goal is reliable Java architecture, explicit state transitions, reproducible evaluation, and testability.
-3. **Evaluate execution quality, not PnL.** The algorithms are judged on slippage and fill behaviour, not on future price prediction.
+3. **Evaluate execution quality, not PnL.** The algorithms are judged on slippage, fill behaviour, implementation shortfall, VWAP deviation, and data assumptions, not on future price prediction.
 4. **Keep the repo inspectable.** No heavyweight framework is required; the project builds with `javac` and runs with Java 21.
 
 ## Current limitations
