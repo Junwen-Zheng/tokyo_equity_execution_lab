@@ -1,0 +1,4 @@
+iterations=1000
+eventsPerRun=480
+meanRunMs=0.1878
+eventsPerSecond=2555849.97
