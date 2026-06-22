@@ -1,0 +1,4 @@
+build/
+reports/*.tmp
+*.class
+.DS_Store
