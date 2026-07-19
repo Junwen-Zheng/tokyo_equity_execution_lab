@@ -45,6 +45,7 @@ public final class TestRunner {
 
         String benchmark = LatencyBenchmark.run(replay, 100);
         assertTrue(benchmark.contains("eventsPerSecond"), "benchmark should report throughput");
+        LegacyBehaviorCharacterization.runAll();
         System.out.println("All tests passed");
     }
 
