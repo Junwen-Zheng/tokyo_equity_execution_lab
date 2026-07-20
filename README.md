@@ -62,3 +62,27 @@ docs/
 - The fill model approximates liquidity constraints using reported event volume and configurable participation limits. It does not model queue position or exchange matching rules.
 - SOR is represented as a design extension in `docs/design_notes.md`; the implemented strategies focus on single-venue TWAP/VWAP/POV behaviour.
 
+
+## Build and test
+
+The v2 development path uses Java 21, Maven, and JUnit 5.
+
+Run the complete test suite with:
+
+```bash
+mvn -B test
+```
+
+or:
+
+```bash
+bash scripts/run_tests.sh
+```
+
+Compile and run the demo with:
+
+```bash
+bash scripts/run_demo.sh
+```
+
+GitHub Actions runs `mvn -B verify` on every push to `main` and on pull requests.
