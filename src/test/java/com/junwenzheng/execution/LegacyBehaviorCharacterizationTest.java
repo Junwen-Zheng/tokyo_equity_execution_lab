@@ -11,23 +11,15 @@ import com.junwenzheng.execution.order.ChildOrder;
 import com.junwenzheng.execution.order.Fill;
 import com.junwenzheng.execution.order.ParentOrder;
 import com.junwenzheng.execution.order.Side;
+import org.junit.jupiter.api.Test;
 
-public final class LegacyBehaviorCharacterization {
-    private LegacyBehaviorCharacterization() {
-    }
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-    public static void runAll() {
-        zeroVolumeEventStillProducesOneShareFill();
-        twapSliceSettingActsAsMaximumCap();
-        vwapDecisionDependsOnFutureReplayVolume();
-        riskAcceptsNonPositiveReferencePrices();
+final class LegacyBehaviorCharacterizationTest {
 
-        System.out.println(
-                "Legacy behavior characterization passed"
-        );
-    }
-
-    private static void zeroVolumeEventStillProducesOneShareFill() {
+    @Test
+    void zeroVolumeEventStillProducesOneShareFill() {
         MarketEvent event = new MarketEvent(
                 1L,
                 "JPXDEMO",
@@ -58,11 +50,13 @@ public final class LegacyBehaviorCharacterization {
         assertEquals(
                 1,
                 fill.quantity(),
-                "legacy fill model forces one share on zero volume"
+                "Legacy fill model forces one share "
+                        + "on zero volume"
         );
     }
 
-    private static void twapSliceSettingActsAsMaximumCap() {
+    @Test
+    void twapSliceSettingActsAsMaximumCap() {
         ParentOrder parent = new ParentOrder(
                 "JPXDEMO",
                 Side.BUY,
@@ -70,13 +64,11 @@ public final class LegacyBehaviorCharacterization {
                 100.2
         );
 
-        MarketEvent event = standardEvent();
-
         ExecutionDecision decision = new TwapAlgorithm(
                 100
         ).onEvent(
                 parent,
-                event,
+                standardEvent(),
                 new ReplayProgress(
                         9,
                         10,
@@ -88,11 +80,13 @@ public final class LegacyBehaviorCharacterization {
         assertEquals(
                 100,
                 decision.childQuantity(),
-                "legacy TWAP setting caps a 1000-share deficit at 100"
+                "Legacy TWAP caps a 1000-share "
+                        + "deficit at 100"
         );
     }
 
-    private static void vwapDecisionDependsOnFutureReplayVolume() {
+    @Test
+    void vwapDecisionDependsOnFutureReplayVolume() {
         ParentOrder parent = new ParentOrder(
                 "JPXDEMO",
                 Side.BUY,
@@ -104,42 +98,45 @@ public final class LegacyBehaviorCharacterization {
                 1_000
         );
 
-        ExecutionDecision smallerFutureTotal = algorithm.onEvent(
-                parent,
-                standardEvent(),
-                new ReplayProgress(
-                        0,
-                        10,
-                        100,
-                        1_000
-                )
-        );
+        ExecutionDecision smallerFutureTotal =
+                algorithm.onEvent(
+                        parent,
+                        standardEvent(),
+                        new ReplayProgress(
+                                0,
+                                10,
+                                100,
+                                1_000
+                        )
+                );
 
-        ExecutionDecision largerFutureTotal = algorithm.onEvent(
-                parent,
-                standardEvent(),
-                new ReplayProgress(
-                        0,
-                        10,
-                        100,
-                        2_000
-                )
-        );
+        ExecutionDecision largerFutureTotal =
+                algorithm.onEvent(
+                        parent,
+                        standardEvent(),
+                        new ReplayProgress(
+                                0,
+                                10,
+                                100,
+                                2_000
+                        )
+                );
 
         assertEquals(
                 100,
-                smallerFutureTotal.childQuantity(),
-                "legacy VWAP uses full replay total volume"
+                smallerFutureTotal.childQuantity()
         );
 
         assertEquals(
                 50,
                 largerFutureTotal.childQuantity(),
-                "changing future replay volume changes the live decision"
+                "Changing future replay volume "
+                        + "changes the live decision"
         );
     }
 
-    private static void riskAcceptsNonPositiveReferencePrices() {
+    @Test
+    void riskAcceptsNonPositiveReferencePrices() {
         RiskManager riskManager = new RiskManager(
                 1_000,
                 100_000.0
@@ -156,12 +153,12 @@ public final class LegacyBehaviorCharacterization {
 
         assertTrue(
                 riskManager.isAllowed(order, 0.0),
-                "legacy risk accepts a zero reference price"
+                "Legacy risk accepts a zero price"
         );
 
         assertTrue(
                 riskManager.isAllowed(order, -100.0),
-                "legacy risk accepts a negative reference price"
+                "Legacy risk accepts a negative price"
         );
     }
 
@@ -174,30 +171,5 @@ public final class LegacyBehaviorCharacterization {
                 100.1,
                 1_000L
         );
-    }
-
-    private static void assertEquals(
-            int expected,
-            int actual,
-            String message
-    ) {
-        if (expected != actual) {
-            throw new AssertionError(
-                    message
-                            + ": expected="
-                            + expected
-                            + ", actual="
-                            + actual
-            );
-        }
-    }
-
-    private static void assertTrue(
-            boolean condition,
-            String message
-    ) {
-        if (!condition) {
-            throw new AssertionError(message);
-        }
     }
 }
