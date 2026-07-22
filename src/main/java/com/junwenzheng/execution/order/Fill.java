@@ -7,6 +7,9 @@ public record Fill(
         Side side,
         int quantity,
         double price,
+        double referenceMidPrice,
+        double spreadCostBps,
+        double impactCostBps,
         long timestampMs,
         String strategy,
         String reason
@@ -57,7 +60,37 @@ public record Fill(
             );
         }
 
-        if (timestampMs < 0) {
+        if (
+                !Double.isFinite(referenceMidPrice)
+                        || referenceMidPrice <= 0.0
+        ) {
+            throw new IllegalArgumentException(
+                    "reference mid price must be "
+                            + "finite and positive"
+            );
+        }
+
+        if (
+                !Double.isFinite(spreadCostBps)
+                        || spreadCostBps < 0.0
+        ) {
+            throw new IllegalArgumentException(
+                    "spread cost must be finite "
+                            + "and non-negative"
+            );
+        }
+
+        if (
+                !Double.isFinite(impactCostBps)
+                        || impactCostBps < 0.0
+        ) {
+            throw new IllegalArgumentException(
+                    "impact cost must be finite "
+                            + "and non-negative"
+            );
+        }
+
+        if (timestampMs < 0L) {
             throw new IllegalArgumentException(
                     "timestampMs must be non-negative"
             );
@@ -83,6 +116,10 @@ public record Fill(
         symbol = symbol.trim();
         strategy = strategy.trim();
         reason = reason.trim();
+    }
+
+    public double totalCostBps() {
+        return spreadCostBps + impactCostBps;
     }
 
     public double notional() {
