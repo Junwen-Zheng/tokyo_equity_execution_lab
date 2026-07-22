@@ -8,6 +8,7 @@ import com.junwenzheng.execution.market.MarketDataReplay;
 import com.junwenzheng.execution.market.MarketEvent;
 import com.junwenzheng.execution.order.ChildOrder;
 import com.junwenzheng.execution.order.Fill;
+import com.junwenzheng.execution.engine.FillOutcome;
 import com.junwenzheng.execution.order.ParentOrder;
 
 import java.util.ArrayList;
@@ -139,11 +140,26 @@ public final class ExecutionSimulator {
 
             childOrder.acknowledge(eventTimeMs);
 
-            Fill fill = fillModel.tryFill(
-                    childOrder,
-                    event,
-                    algorithm.name()
-            );
+            FillOutcome fillOutcome =
+                    fillModel.tryFill(
+                            childOrder,
+                            event,
+                            algorithm.name()
+                    );
+
+            if (
+                    fillOutcome
+                            instanceof FillOutcome.NoFill
+            ) {
+                childOrder.cancel(eventTimeMs);
+                continue;
+            }
+
+            Fill fill =
+                    (
+                            (FillOutcome.Filled)
+                                    fillOutcome
+                    ).fill();
 
             validateFill(
                     childOrder,

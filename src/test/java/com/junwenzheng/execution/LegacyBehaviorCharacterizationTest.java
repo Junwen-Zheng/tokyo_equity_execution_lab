@@ -4,11 +4,9 @@ import com.junwenzheng.execution.algo.ExecutionDecision;
 import com.junwenzheng.execution.algo.ReplayProgress;
 import com.junwenzheng.execution.algo.TwapAlgorithm;
 import com.junwenzheng.execution.algo.VwapAlgorithm;
-import com.junwenzheng.execution.engine.FillModel;
 import com.junwenzheng.execution.engine.RiskManager;
 import com.junwenzheng.execution.market.MarketEvent;
 import com.junwenzheng.execution.order.ChildOrder;
-import com.junwenzheng.execution.order.Fill;
 import com.junwenzheng.execution.order.ParentOrder;
 import com.junwenzheng.execution.order.Side;
 import org.junit.jupiter.api.Test;
@@ -17,43 +15,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class LegacyBehaviorCharacterizationTest {
-
-    @Test
-    void zeroVolumeEventStillProducesOneShareFill() {
-        MarketEvent event = new MarketEvent(
-                1L,
-                "JPXDEMO",
-                100.0,
-                100.2,
-                100.1,
-                0L
-        );
-
-        ChildOrder order = new ChildOrder(
-                "parent-1",
-                "JPXDEMO",
-                Side.BUY,
-                25,
-                1L,
-                "zero-volume characterization"
-        );
-
-        Fill fill = new FillModel(
-                0.12,
-                1.6
-        ).tryFill(
-                order,
-                event,
-                "CHARACTERIZATION"
-        );
-
-        assertEquals(
-                1,
-                fill.quantity(),
-                "Legacy fill model forces one share "
-                        + "on zero volume"
-        );
-    }
 
     @Test
     void twapSliceSettingActsAsMaximumCap() {
