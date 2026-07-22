@@ -25,6 +25,7 @@ public final class FillModel {
                 ? event.ask() * (1.0 + impactMultiplier)
                 : event.bid() * (1.0 - impactMultiplier);
         return new Fill(
+                childOrder.childOrderId(),
                 childOrder.parentOrderId(),
                 childOrder.symbol(),
                 childOrder.side(),
