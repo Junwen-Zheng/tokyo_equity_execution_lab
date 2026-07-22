@@ -3,6 +3,7 @@ package com.junwenzheng.execution.engine;
 import com.junwenzheng.execution.algo.ExecutionAlgorithm;
 import com.junwenzheng.execution.algo.ExecutionDecision;
 import com.junwenzheng.execution.algo.ReplayProgress;
+import com.junwenzheng.execution.market.DeterministicEventClock;
 import com.junwenzheng.execution.market.MarketDataReplay;
 import com.junwenzheng.execution.market.MarketEvent;
 import com.junwenzheng.execution.order.ChildOrder;
@@ -28,8 +29,11 @@ public final class ExecutionSimulator {
         long cumulativeVolume = 0;
         int rejectedChildren = 0;
         List<MarketEvent> events = replay.events();
+        DeterministicEventClock clock =
+                new DeterministicEventClock();
         for (int i = 0; i < events.size() && parentOrder.remainingQuantity() > 0; i++) {
             MarketEvent event = events.get(i);
+            long eventTimeMs = clock.advanceTo(event);
             cumulativeVolume += event.volume();
             ReplayProgress progress = new ReplayProgress(i, events.size(), cumulativeVolume, replay.totalVolume());
             ExecutionDecision decision = algorithm.onEvent(parentOrder, event, progress);
@@ -39,7 +43,7 @@ public final class ExecutionSimulator {
                     parentOrder.symbol(),
                     parentOrder.side(),
                     Math.min(decision.childQuantity(), parentOrder.remainingQuantity()),
-                    event.timestampMs(),
+                    eventTimeMs,
                     decision.reason()
             );
             if (!riskManager.isAllowed(childOrder, event.mid())) {
