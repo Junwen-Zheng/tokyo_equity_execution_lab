@@ -35,19 +35,28 @@ The default fill model approximates execution using:
 
 This avoids claiming real exchange matching while still creating realistic constraints for evaluation.
 
-## SOR extension
+## Smart order routing
 
-Smart order routing is not fully implemented yet. The next version would add multiple venues per timestamp:
+The execution simulator supports multiple venues at the same timestamp using
+venue-aware market rows with these fields:
 
-```text
-timestamp_ms,symbol,venue,bid,ask,last,volume,queue_depth
-```
+    timestamp_ms,symbol,venue,bid,ask,last,volume,queue_depth
 
-A simple SOR policy would route child quantity across venues by:
+An optional final event-type field is also supported.
 
-1. best price after fees,
-2. available displayed liquidity,
-3. venue-specific participation cap,
-4. estimated adverse-selection penalty,
-5. regulatory / market-session constraints.
-```
+The deterministic router ranks destinations using:
+
+1. side-aware effective price after fees
+2. adverse-selection penalty
+3. displayed queue depth
+4. venue-specific participation capacity
+5. venue name and source sequence for deterministic tie-breaking
+
+A scheduling algorithm produces one desired quantity for a consolidated
+market snapshot. The router may split that quantity across several venues.
+
+Each allocation becomes a venue-specific child order with its own risk
+decision, lifecycle, fill attempt, and terminal state.
+
+Regulatory rules, auction eligibility, and venue-session restrictions remain
+future extensions.

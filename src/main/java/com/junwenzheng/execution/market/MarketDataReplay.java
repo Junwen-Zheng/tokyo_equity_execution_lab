@@ -95,34 +95,77 @@ public final class MarketDataReplay
         if (
                 values.size() != 6
                         && values.size() != 7
+                        && values.size() != 8
+                        && values.size() != 9
         ) {
             throw new IllegalArgumentException(
-                    "expected 6 or 7 columns, got "
+                    "expected 6 or 7 columns "
+                            + "for legacy rows, or 8 or 9 "
+                            + "columns for venue rows, got "
                             + values.size()
             );
         }
 
+        if (values.size() <= 7) {
+            MarketEventType type =
+                    values.size() == 7
+                            ? parseType(values.get(6))
+                            : MarketEventType.CONTINUOUS;
+
+            long volume =
+                    Long.parseLong(
+                            values.get(5).trim()
+                    );
+
+            return new MarketEvent(
+                    Long.parseLong(
+                            values.get(0).trim()
+                    ),
+                    sourceSequence,
+                    type,
+                    values.get(1).trim(),
+                    MarketEvent.DEFAULT_VENUE,
+                    Double.parseDouble(
+                            values.get(2).trim()
+                    ),
+                    Double.parseDouble(
+                            values.get(3).trim()
+                    ),
+                    Double.parseDouble(
+                            values.get(4).trim()
+                    ),
+                    volume,
+                    volume
+            );
+        }
+
         MarketEventType type =
-                values.size() == 7
-                        ? parseType(values.get(6))
+                values.size() == 9
+                        ? parseType(values.get(8))
                         : MarketEventType.CONTINUOUS;
 
         return new MarketEvent(
-                Long.parseLong(values.get(0).trim()),
+                Long.parseLong(
+                        values.get(0).trim()
+                ),
                 sourceSequence,
                 type,
                 values.get(1).trim(),
-                Double.parseDouble(
-                        values.get(2).trim()
-                ),
+                values.get(2).trim(),
                 Double.parseDouble(
                         values.get(3).trim()
                 ),
                 Double.parseDouble(
                         values.get(4).trim()
                 ),
-                Long.parseLong(
+                Double.parseDouble(
                         values.get(5).trim()
+                ),
+                Long.parseLong(
+                        values.get(6).trim()
+                ),
+                Long.parseLong(
+                        values.get(7).trim()
                 )
         );
     }
@@ -168,6 +211,25 @@ public final class MarketDataReplay
                 event -> event.symbol()
                         .equals(normalized),
                 "no events for symbol "
+                        + normalized
+        );
+    }
+
+    public MarketDataReplay forVenue(
+            String venue
+    ) {
+        if (venue == null || venue.isBlank()) {
+            throw new IllegalArgumentException(
+                    "venue is required"
+            );
+        }
+
+        String normalized = venue.trim();
+
+        return filtered(
+                event -> event.venue()
+                        .equals(normalized),
+                "no events for venue "
                         + normalized
         );
     }

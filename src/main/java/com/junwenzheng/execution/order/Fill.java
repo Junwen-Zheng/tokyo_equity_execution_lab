@@ -4,6 +4,7 @@ public record Fill(
         String childOrderId,
         String parentOrderId,
         String symbol,
+        String venue,
         Side side,
         int quantity,
         double price,
@@ -36,6 +37,12 @@ public record Fill(
         if (symbol == null || symbol.isBlank()) {
             throw new IllegalArgumentException(
                     "symbol is required"
+            );
+        }
+
+        if (venue == null || venue.isBlank()) {
+            throw new IllegalArgumentException(
+                    "venue is required"
             );
         }
 
@@ -114,8 +121,40 @@ public record Fill(
         childOrderId = childOrderId.trim();
         parentOrderId = parentOrderId.trim();
         symbol = symbol.trim();
+        venue = venue.trim();
         strategy = strategy.trim();
         reason = reason.trim();
+    }
+
+    public Fill(
+            String childOrderId,
+            String parentOrderId,
+            String symbol,
+            Side side,
+            int quantity,
+            double price,
+            double referenceMidPrice,
+            double spreadCostBps,
+            double impactCostBps,
+            long timestampMs,
+            String strategy,
+            String reason
+    ) {
+        this(
+                childOrderId,
+                parentOrderId,
+                symbol,
+                "PRIMARY",
+                side,
+                quantity,
+                price,
+                referenceMidPrice,
+                spreadCostBps,
+                impactCostBps,
+                timestampMs,
+                strategy,
+                reason
+        );
     }
 
     public double totalCostBps() {
