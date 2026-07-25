@@ -1,5 +1,6 @@
 package com.junwenzheng.execution;
 
+import com.junwenzheng.execution.algo.OnlineVwapAlgorithm;
 import com.junwenzheng.execution.algo.PovAlgorithm;
 import com.junwenzheng.execution.algo.TwapAlgorithm;
 import com.junwenzheng.execution.algo.VwapAlgorithm;
@@ -124,14 +125,35 @@ final class BaselineExecutionTest {
                 new TwapAlgorithm(500)
         );
 
-        SimulationResult vwap = simulator().run(
-                parentOrder(replay),
-                replay,
-                new VwapAlgorithm(800)
-        );
+        SimulationResult oracleVwap =
+                simulator().run(
+                        parentOrder(replay),
+                        replay,
+                        new VwapAlgorithm(800)
+                );
+
+        long onlineVolumeForecast =
+                Math.max(
+                        1L,
+                        replay.events()
+                                .getFirst()
+                                .volume()
+                                * (long) replay.events().size()
+                );
+
+        SimulationResult onlineVwap =
+                simulator().run(
+                        parentOrder(replay),
+                        replay,
+                        new OnlineVwapAlgorithm(
+                                800,
+                                onlineVolumeForecast
+                        )
+                );
 
         assertFalse(twap.fills().isEmpty());
-        assertFalse(vwap.fills().isEmpty());
+        assertFalse(oracleVwap.fills().isEmpty());
+        assertFalse(onlineVwap.fills().isEmpty());
     }
 
     @Test

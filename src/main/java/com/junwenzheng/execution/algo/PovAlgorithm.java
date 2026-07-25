@@ -3,12 +3,31 @@ package com.junwenzheng.execution.algo;
 import com.junwenzheng.execution.market.MarketEvent;
 import com.junwenzheng.execution.order.ParentOrder;
 
-public final class PovAlgorithm implements ExecutionAlgorithm {
+public final class PovAlgorithm
+        implements ExecutionAlgorithm {
     private final double participationRate;
     private final int maxSliceQty;
 
-    public PovAlgorithm(double participationRate, int maxSliceQty) {
-        if (participationRate <= 0 || participationRate > 1) throw new IllegalArgumentException("participationRate must be in (0, 1]");
+    public PovAlgorithm(
+            double participationRate,
+            int maxSliceQty
+    ) {
+        if (
+                !Double.isFinite(participationRate)
+                        || participationRate <= 0.0
+                        || participationRate > 1.0
+        ) {
+            throw new IllegalArgumentException(
+                    "participationRate must be in (0, 1]"
+            );
+        }
+
+        if (maxSliceQty <= 0) {
+            throw new IllegalArgumentException(
+                    "maxSliceQty must be positive"
+            );
+        }
+
         this.participationRate = participationRate;
         this.maxSliceQty = maxSliceQty;
     }
@@ -19,10 +38,45 @@ public final class PovAlgorithm implements ExecutionAlgorithm {
     }
 
     @Override
-    public ExecutionDecision onEvent(ParentOrder parentOrder, MarketEvent event, ReplayProgress progress) {
-        int childQty = (int) Math.floor(event.volume() * participationRate);
-        childQty = Math.min(parentOrder.remainingQuantity(), Math.min(maxSliceQty, childQty));
-        if (childQty <= 0) return ExecutionDecision.none("no executable participation quantity");
-        return new ExecutionDecision(childQty, "participation of event volume");
+    public ExecutionDecision onEvent(
+            ParentOrder parentOrder,
+            MarketEvent event,
+            ReplayProgress progress
+    ) {
+        long uncappedTarget =
+                (long) Math.floor(
+                        progress.cumulativeVolume()
+                                * participationRate
+                );
+
+        int targetCumulative =
+                (int) Math.min(
+                        parentOrder.quantity(),
+                        uncappedTarget
+                );
+
+        int participationDeficit =
+                targetCumulative
+                        - parentOrder.filledQuantity();
+
+        if (participationDeficit <= 0) {
+            return ExecutionDecision.none(
+                    "already at participation target"
+            );
+        }
+
+        int childQuantity =
+                Math.min(
+                        parentOrder.remainingQuantity(),
+                        Math.min(
+                                maxSliceQty,
+                                participationDeficit
+                        )
+                );
+
+        return new ExecutionDecision(
+                childQuantity,
+                "cumulative participation catch-up"
+        );
     }
 }
