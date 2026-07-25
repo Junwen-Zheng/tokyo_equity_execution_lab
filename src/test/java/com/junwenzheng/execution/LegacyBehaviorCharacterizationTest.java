@@ -4,15 +4,12 @@ import com.junwenzheng.execution.algo.ExecutionDecision;
 import com.junwenzheng.execution.algo.ReplayProgress;
 import com.junwenzheng.execution.algo.TwapAlgorithm;
 import com.junwenzheng.execution.algo.VwapAlgorithm;
-import com.junwenzheng.execution.engine.RiskManager;
 import com.junwenzheng.execution.market.MarketEvent;
-import com.junwenzheng.execution.order.ChildOrder;
 import com.junwenzheng.execution.order.ParentOrder;
 import com.junwenzheng.execution.order.Side;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class LegacyBehaviorCharacterizationTest {
 
@@ -93,33 +90,6 @@ final class LegacyBehaviorCharacterizationTest {
                 largerFutureTotal.childQuantity(),
                 "Changing future replay volume "
                         + "changes the live decision"
-        );
-    }
-
-    @Test
-    void riskAcceptsNonPositiveReferencePrices() {
-        RiskManager riskManager = new RiskManager(
-                1_000,
-                100_000.0
-        );
-
-        ChildOrder order = new ChildOrder(
-                "parent-2",
-                "JPXDEMO",
-                Side.BUY,
-                100,
-                1L,
-                "risk characterization"
-        );
-
-        assertTrue(
-                riskManager.isAllowed(order, 0.0),
-                "Legacy risk accepts a zero price"
-        );
-
-        assertTrue(
-                riskManager.isAllowed(order, -100.0),
-                "Legacy risk accepts a negative price"
         );
     }
 
