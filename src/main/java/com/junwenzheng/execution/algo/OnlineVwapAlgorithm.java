@@ -3,25 +3,35 @@ package com.junwenzheng.execution.algo;
 import com.junwenzheng.execution.market.MarketEvent;
 import com.junwenzheng.execution.order.ParentOrder;
 
-public final class TwapAlgorithm
+public final class OnlineVwapAlgorithm
         implements ExecutionAlgorithm {
-    private final int minSliceQty;
+    private final int maxSliceQty;
+    private final long forecastTotalVolume;
 
-    public TwapAlgorithm(
-            int minSliceQty
+    public OnlineVwapAlgorithm(
+            int maxSliceQty,
+            long forecastTotalVolume
     ) {
-        if (minSliceQty <= 0) {
+        if (maxSliceQty <= 0) {
             throw new IllegalArgumentException(
-                    "minSliceQty must be positive"
+                    "maxSliceQty must be positive"
             );
         }
 
-        this.minSliceQty = minSliceQty;
+        if (forecastTotalVolume <= 0L) {
+            throw new IllegalArgumentException(
+                    "forecastTotalVolume must be positive"
+            );
+        }
+
+        this.maxSliceQty = maxSliceQty;
+        this.forecastTotalVolume =
+                forecastTotalVolume;
     }
 
     @Override
     public String name() {
-        return "TWAP";
+        return "VWAP_ONLINE";
     }
 
     @Override
@@ -33,7 +43,10 @@ public final class TwapAlgorithm
         int targetCumulative =
                 (int) Math.ceil(
                         parentOrder.quantity()
-                                * progress.progressFraction()
+                                * progress
+                                .observedVolumeFraction(
+                                        forecastTotalVolume
+                                )
                 );
 
         int scheduleDeficit =
@@ -42,22 +55,22 @@ public final class TwapAlgorithm
 
         if (scheduleDeficit <= 0) {
             return ExecutionDecision.none(
-                    "already at time-schedule target"
+                    "already at online volume target"
             );
         }
 
         int childQuantity =
                 Math.min(
                         parentOrder.remainingQuantity(),
-                        Math.max(
-                                scheduleDeficit,
-                                minSliceQty
+                        Math.min(
+                                maxSliceQty,
+                                scheduleDeficit
                         )
                 );
 
         return new ExecutionDecision(
                 childQuantity,
-                "time-schedule catch-up"
+                "online volume-forecast catch-up"
         );
     }
 }

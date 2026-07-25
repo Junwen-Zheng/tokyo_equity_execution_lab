@@ -1,6 +1,7 @@
 package com.junwenzheng.execution;
 
 import com.junwenzheng.execution.algo.ExecutionAlgorithm;
+import com.junwenzheng.execution.algo.OnlineVwapAlgorithm;
 import com.junwenzheng.execution.algo.PovAlgorithm;
 import com.junwenzheng.execution.algo.TwapAlgorithm;
 import com.junwenzheng.execution.algo.VwapAlgorithm;
@@ -32,9 +33,22 @@ public final class App {
         double arrivalPrice = replay.events().getFirst().ask();
         int parentQty = 20_000;
 
+        long onlineVolumeForecast =
+                Math.max(
+                        1L,
+                        replay.events()
+                                .getFirst()
+                                .volume()
+                                * (long) replay.events().size()
+                );
+
         List<ExecutionAlgorithm> algorithms = List.of(
                 new TwapAlgorithm(750),
                 new VwapAlgorithm(1_200),
+                new OnlineVwapAlgorithm(
+                        1_200,
+                        onlineVolumeForecast
+                ),
                 new PovAlgorithm(0.08, 1_000)
         );
 
