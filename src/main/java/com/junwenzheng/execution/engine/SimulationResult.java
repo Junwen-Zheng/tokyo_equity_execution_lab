@@ -14,7 +14,8 @@ public record SimulationResult(
         MarketDataReplay replay,
         List<ChildOrder> childOrders,
         List<Fill> fills,
-        List<LatencyEvent> latencyEvents
+        List<LatencyEvent> latencyEvents,
+        List<RiskDecision> riskDecisions
 ) {
     public SimulationResult {
         if (
@@ -56,10 +57,17 @@ public record SimulationResult(
             );
         }
 
+        if (riskDecisions == null) {
+            throw new IllegalArgumentException(
+                    "riskDecisions are required"
+            );
+        }
+
         strategyName = strategyName.trim();
         childOrders = List.copyOf(childOrders);
         fills = List.copyOf(fills);
         latencyEvents = List.copyOf(latencyEvents);
+        riskDecisions = List.copyOf(riskDecisions);
     }
 
     public int rejectedChildren() {

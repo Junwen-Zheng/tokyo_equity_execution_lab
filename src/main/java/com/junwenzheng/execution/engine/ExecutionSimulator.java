@@ -95,6 +95,9 @@ public final class ExecutionSimulator {
         List<LatencyEvent> latencyEvents =
                 new ArrayList<>();
 
+        List<RiskDecision> riskDecisions =
+                new ArrayList<>();
+
         PositionTracker positions =
                 new PositionTracker();
 
@@ -189,12 +192,18 @@ public final class ExecutionSimulator {
                     )
             );
 
-            if (
-                    !riskManager.isAllowed(
+            RiskDecision riskDecision =
+                    riskManager.evaluate(
                             childOrder,
-                            event.mid()
-                    )
-            ) {
+                            event.mid(),
+                            positions.position(
+                                    childOrder.symbol()
+                            )
+                    );
+
+            riskDecisions.add(riskDecision);
+
+            if (!riskDecision.allowed()) {
                 childOrder.reject(riskTimeMs);
 
                 latencyEvents.add(
@@ -329,7 +338,8 @@ public final class ExecutionSimulator {
                 replay,
                 childOrders,
                 fills,
-                latencyEvents
+                latencyEvents,
+                riskDecisions
         );
     }
 
