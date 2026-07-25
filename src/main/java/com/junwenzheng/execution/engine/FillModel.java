@@ -71,10 +71,30 @@ public final class FillModel {
             MarketEvent event,
             String strategyName
     ) {
+        long fillTimestampMs =
+                event == null
+                        ? 0L
+                        : event.timestampMs();
+
+        return tryFill(
+                childOrder,
+                event,
+                strategyName,
+                fillTimestampMs
+        );
+    }
+
+    public FillOutcome tryFill(
+            ChildOrder childOrder,
+            MarketEvent event,
+            String strategyName,
+            long fillTimestampMs
+    ) {
         validateInputs(
                 childOrder,
                 event,
-                strategyName
+                strategyName,
+                fillTimestampMs
         );
 
         long participationCap =
@@ -183,7 +203,7 @@ public final class FillModel {
                 referenceMidPrice,
                 spreadCostBps,
                 impactCostBps,
-                event.timestampMs(),
+                fillTimestampMs,
                 strategyName,
                 childOrder.reason()
         );
@@ -224,7 +244,8 @@ public final class FillModel {
     private static void validateInputs(
             ChildOrder childOrder,
             MarketEvent event,
-            String strategyName
+            String strategyName,
+            long fillTimestampMs
     ) {
         if (childOrder == null) {
             throw new IllegalArgumentException(
@@ -268,11 +289,20 @@ public final class FillModel {
         }
 
         if (
-                event.timestampMs()
+                fillTimestampMs
                         < childOrder.lastUpdateTimestampMs()
         ) {
             throw new IllegalArgumentException(
-                    "event timestamp precedes child lifecycle"
+                    "fill timestamp precedes child lifecycle"
+            );
+        }
+
+        if (
+                fillTimestampMs
+                        < event.timestampMs()
+        ) {
+            throw new IllegalArgumentException(
+                    "fill timestamp precedes market event"
             );
         }
     }

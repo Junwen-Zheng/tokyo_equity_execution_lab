@@ -17,10 +17,23 @@ import java.util.List;
 public final class ExecutionSimulator {
     private final RiskManager riskManager;
     private final FillModel fillModel;
+    private final DeterministicLatencyPipeline latencyPipeline;
 
     public ExecutionSimulator(
             RiskManager riskManager,
             FillModel fillModel
+    ) {
+        this(
+                riskManager,
+                fillModel,
+                LatencyProfile.deterministicBaseline()
+        );
+    }
+
+    public ExecutionSimulator(
+            RiskManager riskManager,
+            FillModel fillModel,
+            LatencyProfile latencyProfile
     ) {
         if (riskManager == null) {
             throw new IllegalArgumentException(
@@ -34,8 +47,18 @@ public final class ExecutionSimulator {
             );
         }
 
+        if (latencyProfile == null) {
+            throw new IllegalArgumentException(
+                    "latencyProfile is required"
+            );
+        }
+
         this.riskManager = riskManager;
         this.fillModel = fillModel;
+        this.latencyPipeline =
+                new DeterministicLatencyPipeline(
+                        latencyProfile
+                );
     }
 
     public SimulationResult run(
@@ -67,6 +90,9 @@ public final class ExecutionSimulator {
                 new ArrayList<>();
 
         List<Fill> fills =
+                new ArrayList<>();
+
+        List<LatencyEvent> latencyEvents =
                 new ArrayList<>();
 
         PositionTracker positions =
@@ -101,6 +127,12 @@ public final class ExecutionSimulator {
                             replay.totalVolume()
                     );
 
+            long decisionTimeMs =
+                    latencyPipeline
+                            .decisionTimestampMs(
+                                    eventTimeMs
+                            );
+
             ExecutionDecision decision =
                     algorithm.onEvent(
                             parentOrder,
@@ -122,11 +154,40 @@ public final class ExecutionSimulator {
                                     parentOrder
                                             .remainingQuantity()
                             ),
-                            eventTimeMs,
+                            decisionTimeMs,
                             decision.reason()
                     );
 
             childOrders.add(childOrder);
+
+            latencyEvents.add(
+                    new LatencyEvent(
+                            childOrder.childOrderId(),
+                            LatencyStage.MARKET_EVENT,
+                            eventTimeMs
+                    )
+            );
+
+            latencyEvents.add(
+                    new LatencyEvent(
+                            childOrder.childOrderId(),
+                            LatencyStage.DECISION,
+                            decisionTimeMs
+                    )
+            );
+
+            long riskTimeMs =
+                    latencyPipeline.riskTimestampMs(
+                            decisionTimeMs
+                    );
+
+            latencyEvents.add(
+                    new LatencyEvent(
+                            childOrder.childOrderId(),
+                            LatencyStage.RISK_CHECK,
+                            riskTimeMs
+                    )
+            );
 
             if (
                     !riskManager.isAllowed(
@@ -134,24 +195,72 @@ public final class ExecutionSimulator {
                             event.mid()
                     )
             ) {
-                childOrder.reject(eventTimeMs);
+                childOrder.reject(riskTimeMs);
+
+                latencyEvents.add(
+                        new LatencyEvent(
+                                childOrder.childOrderId(),
+                                LatencyStage.REJECTION,
+                                riskTimeMs
+                        )
+                );
+
                 continue;
             }
 
-            childOrder.acknowledge(eventTimeMs);
+            long acknowledgementTimeMs =
+                    latencyPipeline
+                            .acknowledgementTimestampMs(
+                                    riskTimeMs
+                            );
+
+            childOrder.acknowledge(
+                    acknowledgementTimeMs
+            );
+
+            latencyEvents.add(
+                    new LatencyEvent(
+                            childOrder.childOrderId(),
+                            LatencyStage.ACKNOWLEDGEMENT,
+                            acknowledgementTimeMs
+                    )
+            );
+
+            long fillTimeMs =
+                    latencyPipeline.fillTimestampMs(
+                            acknowledgementTimeMs
+                    );
 
             FillOutcome fillOutcome =
                     fillModel.tryFill(
                             childOrder,
                             event,
-                            algorithm.name()
+                            algorithm.name(),
+                            fillTimeMs
                     );
 
             if (
                     fillOutcome
                             instanceof FillOutcome.NoFill
             ) {
-                childOrder.cancel(eventTimeMs);
+                long cancellationTimeMs =
+                        latencyPipeline
+                                .cancellationTimestampMs(
+                                        fillTimeMs
+                                );
+
+                childOrder.cancel(
+                        cancellationTimeMs
+                );
+
+                latencyEvents.add(
+                        new LatencyEvent(
+                                childOrder.childOrderId(),
+                                LatencyStage.CANCELLATION,
+                                cancellationTimeMs
+                        )
+                );
+
                 continue;
             }
 
@@ -164,6 +273,14 @@ public final class ExecutionSimulator {
             validateFill(
                     childOrder,
                     fill
+            );
+
+            latencyEvents.add(
+                    new LatencyEvent(
+                            childOrder.childOrderId(),
+                            LatencyStage.FILL,
+                            fill.timestampMs()
+                    )
             );
 
             childOrder.applyFill(
@@ -179,8 +296,22 @@ public final class ExecutionSimulator {
             positions.apply(fill);
 
             if (childOrder.remainingQuantity() > 0) {
+                long cancellationTimeMs =
+                        latencyPipeline
+                                .cancellationTimestampMs(
+                                        fill.timestampMs()
+                                );
+
                 childOrder.cancel(
-                        fill.timestampMs()
+                        cancellationTimeMs
+                );
+
+                latencyEvents.add(
+                        new LatencyEvent(
+                                childOrder.childOrderId(),
+                                LatencyStage.CANCELLATION,
+                                cancellationTimeMs
+                        )
                 );
             }
         }
@@ -197,7 +328,8 @@ public final class ExecutionSimulator {
                 parentOrder,
                 replay,
                 childOrders,
-                fills
+                fills,
+                latencyEvents
         );
     }
 
