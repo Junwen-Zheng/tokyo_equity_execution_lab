@@ -197,6 +197,7 @@ public final class FillModel {
                 childOrder.childOrderId(),
                 childOrder.parentOrderId(),
                 childOrder.symbol(),
+                childOrder.venue(),
                 childOrder.side(),
                 filledQuantity,
                 price,
@@ -285,6 +286,15 @@ public final class FillModel {
         ) {
             throw new IllegalArgumentException(
                     "child and event symbols do not match"
+            );
+        }
+
+        if (
+                !childOrder.venue()
+                        .equals(event.venue())
+        ) {
+            throw new IllegalArgumentException(
+                    "child and event venues do not match"
             );
         }
 

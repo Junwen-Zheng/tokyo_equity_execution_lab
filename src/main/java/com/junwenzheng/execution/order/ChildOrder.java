@@ -6,6 +6,7 @@ public final class ChildOrder {
     private final String childOrderId;
     private final String parentOrderId;
     private final String symbol;
+    private final String venue;
     private final Side side;
     private final int quantity;
     private final long timestampMs;
@@ -27,6 +28,28 @@ public final class ChildOrder {
                 UUID.randomUUID().toString(),
                 parentOrderId,
                 symbol,
+                "PRIMARY",
+                side,
+                quantity,
+                timestampMs,
+                reason
+        );
+    }
+
+    public static ChildOrder routed(
+            String parentOrderId,
+            String symbol,
+            String venue,
+            Side side,
+            int quantity,
+            long timestampMs,
+            String reason
+    ) {
+        return new ChildOrder(
+                UUID.randomUUID().toString(),
+                parentOrderId,
+                symbol,
+                venue,
                 side,
                 quantity,
                 timestampMs,
@@ -38,6 +61,28 @@ public final class ChildOrder {
             String childOrderId,
             String parentOrderId,
             String symbol,
+            Side side,
+            int quantity,
+            long timestampMs,
+            String reason
+    ) {
+        this(
+                childOrderId,
+                parentOrderId,
+                symbol,
+                "PRIMARY",
+                side,
+                quantity,
+                timestampMs,
+                reason
+        );
+    }
+
+    public ChildOrder(
+            String childOrderId,
+            String parentOrderId,
+            String symbol,
+            String venue,
             Side side,
             int quantity,
             long timestampMs,
@@ -64,6 +109,12 @@ public final class ChildOrder {
         if (symbol == null || symbol.isBlank()) {
             throw new IllegalArgumentException(
                     "symbol is required"
+            );
+        }
+
+        if (venue == null || venue.isBlank()) {
+            throw new IllegalArgumentException(
+                    "venue is required"
             );
         }
 
@@ -94,6 +145,7 @@ public final class ChildOrder {
         this.childOrderId = childOrderId.trim();
         this.parentOrderId = parentOrderId.trim();
         this.symbol = symbol.trim();
+        this.venue = venue.trim();
         this.side = side;
         this.quantity = quantity;
         this.timestampMs = timestampMs;
@@ -112,6 +164,10 @@ public final class ChildOrder {
 
     public String symbol() {
         return symbol;
+    }
+
+    public String venue() {
+        return venue;
     }
 
     public Side side() {

@@ -5,6 +5,7 @@ import com.junwenzheng.execution.order.ChildOrder;
 import com.junwenzheng.execution.order.ChildOrderStatus;
 import com.junwenzheng.execution.order.Fill;
 import com.junwenzheng.execution.order.ParentOrder;
+import com.junwenzheng.execution.routing.RoutingDecision;
 
 import java.util.List;
 
@@ -15,7 +16,8 @@ public record SimulationResult(
         List<ChildOrder> childOrders,
         List<Fill> fills,
         List<LatencyEvent> latencyEvents,
-        List<RiskDecision> riskDecisions
+        List<RiskDecision> riskDecisions,
+        List<RoutingDecision> routingDecisions
 ) {
     public SimulationResult {
         if (
@@ -63,11 +65,40 @@ public record SimulationResult(
             );
         }
 
+        if (routingDecisions == null) {
+            throw new IllegalArgumentException(
+                    "routingDecisions are required"
+            );
+        }
+
         strategyName = strategyName.trim();
         childOrders = List.copyOf(childOrders);
         fills = List.copyOf(fills);
         latencyEvents = List.copyOf(latencyEvents);
         riskDecisions = List.copyOf(riskDecisions);
+        routingDecisions =
+                List.copyOf(routingDecisions);
+    }
+
+    public SimulationResult(
+            String strategyName,
+            ParentOrder parentOrder,
+            MarketDataReplay replay,
+            List<ChildOrder> childOrders,
+            List<Fill> fills,
+            List<LatencyEvent> latencyEvents,
+            List<RiskDecision> riskDecisions
+    ) {
+        this(
+                strategyName,
+                parentOrder,
+                replay,
+                childOrders,
+                fills,
+                latencyEvents,
+                riskDecisions,
+                List.of()
+        );
     }
 
     public int rejectedChildren() {
