@@ -64,6 +64,20 @@ public final class SmartOrderRouter {
             int requestedQuantity,
             List<MarketEvent> venueEvents
     ) {
+        return route(
+                side,
+                requestedQuantity,
+                venueEvents,
+                1
+        );
+    }
+
+    public RoutingDecision route(
+            Side side,
+            int requestedQuantity,
+            List<MarketEvent> venueEvents,
+            int lotSize
+    ) {
         if (side == null) {
             throw new IllegalArgumentException(
                     "side is required"
@@ -76,6 +90,19 @@ public final class SmartOrderRouter {
             );
         }
 
+        if (lotSize <= 0) {
+            throw new IllegalArgumentException(
+                    "lotSize must be positive"
+            );
+        }
+
+        if (requestedQuantity % lotSize != 0) {
+            throw new IllegalArgumentException(
+                    "requestedQuantity must be "
+                            + "a multiple of lotSize"
+            );
+        }
+
         validateSnapshot(venueEvents);
 
         List<RouteCandidate> candidates =
@@ -83,7 +110,8 @@ public final class SmartOrderRouter {
                         .map(
                                 event -> candidate(
                                         side,
-                                        event
+                                        event,
+                                        lotSize
                                 )
                         )
                         .filter(
@@ -137,7 +165,8 @@ public final class SmartOrderRouter {
 
     private RouteCandidate candidate(
             Side side,
-            MarketEvent event
+            MarketEvent event,
+            int lotSize
     ) {
         VenueConfiguration configuration =
                 configurations.getOrDefault(
@@ -154,11 +183,17 @@ public final class SmartOrderRouter {
                                 .maxParticipation()
                 );
 
-        long availableQuantity =
+        long rawAvailableQuantity =
                 Math.min(
                         event.queueDepth(),
                         participationCapacity
                 );
+
+        long availableQuantity =
+                (
+                        rawAvailableQuantity
+                                / lotSize
+                ) * lotSize;
 
         double routingCostMultiplier =
                 configuration

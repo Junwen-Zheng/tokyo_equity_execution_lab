@@ -12,10 +12,12 @@ The target role is a Java algo/execution technology role, not a pure quant resea
 
 - Server-side Java design for a market-data replay and execution simulation engine
 - Order and fill state machines with realistic failure modes and risk checks
-- TWAP, VWAP, and POV execution strategies
+- TWAP, online VWAP, oracle VWAP, and POV execution strategies
+- Deterministic multi-venue smart order routing with venue costs and liquidity constraints
+- Opt-in Tokyo sessions, auctions, tick-size tables, and board-lot enforcement
 - Execution-quality metrics such as fill rate, implementation shortfall, VWAP slippage, participation, and turnover
-- Latency/throughput microbenchmarks and reproducible command-line runs
-- Research logs showing iteration, assumptions, limitations, and what did not work
+- Deterministic latency modelling and reproducible command-line runs
+- Research logs showing iteration, assumptions, limitations, and implementation defects
 
 ## Quick start
 
@@ -35,18 +37,20 @@ Outputs are written to `reports/`:
 
 ```text
 src/main/java/com/junwenzheng/execution
-  algo/       TWAP, VWAP, POV execution strategies
-  engine/     Fill model, risk manager, simulator, positions
-  market/     Market data record, replay, synthetic generator
-  metrics/    Execution quality metrics and report writer
-  order/      Parent/child order, fill, side, status
+  algo/       TWAP, online/oracle VWAP, and POV scheduling
+  engine/     Simulator, fill model, latency, risk, positions
+  market/     Typed events, deterministic replay, synthetic data
+  metrics/    Execution-quality metrics and report generation
+  order/      Parent/child lifecycle, fills, side, status
+  routing/    Venue configuration and smart order routing
+  rules/      Tokyo sessions, tick sizes, and board lots
   util/       CSV and formatting helpers
 src/test/java/com/junwenzheng/execution
-  TestRunner.java
+  JUnit unit, compatibility, and integration tests
 scripts/
   run_demo.sh, run_tests.sh, compile.sh
 docs/
-  research_log.md, design_notes.md, market_microstructure_notes.md, strategy_comparison.md
+  design notes, microstructure notes, strategy comparison, daily research logs
 ```
 
 ## Design principles
@@ -54,13 +58,15 @@ docs/
 1. **Do not fake trading expertise.** The project explains assumptions and limitations rather than claiming production-market realism.
 2. **Show engineering depth.** The goal is reliable Java architecture, explicit state transitions, reproducible evaluation, and testability.
 3. **Evaluate execution quality, not PnL.** The algorithms are judged on slippage, fill behaviour, implementation shortfall, VWAP deviation, and data assumptions, not on future price prediction.
-4. **Keep the repo inspectable.** No heavyweight framework is required; the project builds with `javac` and runs with Java 21.
+4. **Keep the repo inspectable.** The project uses Java 21, Maven, and JUnit 5 while retaining small command-line scripts and explicit domain objects.
 
 ## Current limitations
 
-- Synthetic market-data sample is used for reproducibility. Real external trade/quote data should be normalised into the same schema before serious evaluation.
-- The fill model approximates liquidity constraints using reported event volume and configurable participation limits. It does not model queue position or exchange matching rules.
-- SOR is represented as a design extension in `docs/design_notes.md`; the implemented strategies focus on single-venue TWAP/VWAP/POV behaviour.
+- Synthetic market data is used for reproducibility. External trade and quote data must be normalised before serious evaluation.
+- The deterministic fill model approximates liquidity using event volume, displayed queue depth, participation limits, and configurable slippage. It is not an exchange matching engine.
+- Smart order routing uses snapshot liquidity and configured costs; it does not model message races, live order amendments, or order-book priority.
+- Tokyo rules cover core session, auction, tick-size, and board-lot constraints but not the complete JPX rulebook.
+- The included demo continues to use relative timestamps and the generic simulator. Tokyo rules are enabled explicitly through the Tokyo simulator factories.
 
 
 ## Build and test

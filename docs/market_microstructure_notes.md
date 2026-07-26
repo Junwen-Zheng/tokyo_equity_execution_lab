@@ -10,6 +10,22 @@ This project is intentionally framed as execution technology rather than alpha r
 - **Implementation shortfall**: measured against the parent order's arrival price.
 - **Rejected child orders**: used as a simple risk-control signal when child order size or notional exceeds configured limits.
 
+## Additional microstructure represented in v2
+
+- **Displayed queue depth**: constrains venue capacity and deterministic routing.
+- **Venue costs**: fees and adverse-selection penalties affect route ranking.
+- **Tokyo sessions**: continuous trading, auction boundaries, lunch, and pre-close are represented through an opt-in schedule.
+- **Tick sizes**: TOPIX 500 and other-issue price bands are validated explicitly.
+- **Board lots**: parent, child, route, and fill quantities can be restricted to complete trading units.
+
 ## What is deliberately out of scope
 
-This is not a matching engine and does not claim exchange-level realism. It does not model queue position, hidden liquidity, venue fees, auction periods, internalisation, short-sale constraints, or real Asia equities venue-specific rules. Those would be natural extensions after the execution loop and reporting layer are stable.
+This remains an execution simulator rather than a matching engine and does not
+claim exchange-level realism. It does not model order-book priority, hidden or
+iceberg liquidity, order amendments, exchange-specific order types, dynamic
+auction imbalance publication, daily price limits, special quotes, internalised
+flow, short-sale controls, clearing, or settlement.
+
+The Tokyo rule layer operates on milliseconds since midnight JST supplied by
+the replay. It does not perform calendar, holiday, daylight-saving, or timestamp
+time-zone conversion.
