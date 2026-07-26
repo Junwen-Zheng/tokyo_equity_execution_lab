@@ -58,5 +58,36 @@ market snapshot. The router may split that quantity across several venues.
 Each allocation becomes a venue-specific child order with its own risk
 decision, lifecycle, fill attempt, and terminal state.
 
-Regulatory rules, auction eligibility, and venue-session restrictions remain
-future extensions.
+## Tokyo equity market rules
+
+Tokyo-specific behaviour is implemented as an opt-in rule layer rather than
+being imposed on every replay. This preserves compatibility with the existing
+synthetic data, whose timestamps are relative offsets rather than milliseconds
+since midnight in Japan.
+
+`TokyoSessionSchedule` classifies timestamps into:
+
+- morning opening auction at 09:00
+- morning continuous trading from after 09:00 until 11:30
+- morning closing auction at 11:30
+- lunch break until 12:30
+- afternoon opening auction at 12:30
+- afternoon continuous trading until 15:25
+- non-executing pre-close from 15:25 until 15:30
+- afternoon closing auction at 15:30
+- closed periods outside those windows
+
+`TokyoTickSizeTable` supports separate price-band schedules for TOPIX 500
+constituents and other domestic issues. Bid, ask, last, and parent arrival
+prices are validated against the selected table.
+
+`TokyoEquityRules` enforces configurable board-lot quantities, with 100 shares
+as the standard domestic-equity setting. Desired quantities, routed venue
+capacity, and fills are rounded down to complete lots.
+
+The execution engine exposes `tokyo(...)` and `routedTokyo(...)` factories.
+Legacy simulator factories retain their original unrestricted behaviour.
+
+For routed Tokyo execution, each venue exposes only complete-lot liquidity.
+The fill model also prevents odd-lot fills after participation and queue-ahead
+constraints have been applied.

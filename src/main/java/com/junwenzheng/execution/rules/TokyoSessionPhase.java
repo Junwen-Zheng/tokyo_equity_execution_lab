@@ -1,0 +1,13 @@
+package com.junwenzheng.execution.rules;
+
+public enum TokyoSessionPhase {
+    CLOSED,
+    MORNING_OPENING_AUCTION,
+    MORNING_CONTINUOUS,
+    MORNING_CLOSING_AUCTION,
+    LUNCH_BREAK,
+    AFTERNOON_OPENING_AUCTION,
+    AFTERNOON_CONTINUOUS,
+    PRE_CLOSE,
+    AFTERNOON_CLOSING_AUCTION
+}

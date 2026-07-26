@@ -90,12 +90,44 @@ public final class FillModel {
             String strategyName,
             long fillTimestampMs
     ) {
+        return tryFill(
+                childOrder,
+                event,
+                strategyName,
+                fillTimestampMs,
+                1
+        );
+    }
+
+    public FillOutcome tryFill(
+            ChildOrder childOrder,
+            MarketEvent event,
+            String strategyName,
+            long fillTimestampMs,
+            int lotSize
+    ) {
         validateInputs(
                 childOrder,
                 event,
                 strategyName,
                 fillTimestampMs
         );
+
+        if (lotSize <= 0) {
+            throw new IllegalArgumentException(
+                    "lotSize must be positive"
+            );
+        }
+
+        if (
+                childOrder.quantity()
+                        % lotSize != 0
+        ) {
+            throw new IllegalArgumentException(
+                    "child quantity must be "
+                            + "a multiple of lotSize"
+            );
+        }
 
         long participationCap =
                 calculateParticipationCap(
@@ -111,6 +143,12 @@ public final class FillModel {
         long executableLiquidity =
                 participationCap
                         - queueAheadQuantity;
+
+        long lotExecutableLiquidity =
+                (
+                        executableLiquidity
+                                / lotSize
+                ) * lotSize;
 
         if (event.volume() == 0L) {
             return new FillOutcome.NoFill(
@@ -139,12 +177,21 @@ public final class FillModel {
             );
         }
 
+        if (lotExecutableLiquidity == 0L) {
+            return new FillOutcome.NoFill(
+                    "executable liquidity below lot size",
+                    participationCap,
+                    queueAheadQuantity,
+                    executableLiquidity
+            );
+        }
+
         int filledQuantity =
                 Math.toIntExact(
                         Math.min(
                                 childOrder
                                         .remainingQuantity(),
-                                executableLiquidity
+                                lotExecutableLiquidity
                         )
                 );
 

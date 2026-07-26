@@ -13,6 +13,7 @@ import com.junwenzheng.execution.order.ParentOrder;
 import com.junwenzheng.execution.routing.RouteAllocation;
 import com.junwenzheng.execution.routing.RoutingDecision;
 import com.junwenzheng.execution.routing.SmartOrderRouter;
+import com.junwenzheng.execution.rules.TokyoEquityRules;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -28,6 +29,7 @@ public final class ExecutionSimulator {
     private final DeterministicLatencyPipeline
             latencyPipeline;
     private final SmartOrderRouter smartOrderRouter;
+    private final TokyoEquityRules tokyoEquityRules;
 
     public ExecutionSimulator(
             RiskManager riskManager,
@@ -37,6 +39,7 @@ public final class ExecutionSimulator {
                 riskManager,
                 fillModel,
                 LatencyProfile.deterministicBaseline(),
+                null,
                 null
         );
     }
@@ -50,6 +53,7 @@ public final class ExecutionSimulator {
                 riskManager,
                 fillModel,
                 latencyProfile,
+                null,
                 null
         );
     }
@@ -58,7 +62,8 @@ public final class ExecutionSimulator {
             RiskManager riskManager,
             FillModel fillModel,
             LatencyProfile latencyProfile,
-            SmartOrderRouter smartOrderRouter
+            SmartOrderRouter smartOrderRouter,
+            TokyoEquityRules tokyoEquityRules
     ) {
         if (riskManager == null) {
             throw new IllegalArgumentException(
@@ -85,6 +90,7 @@ public final class ExecutionSimulator {
                         latencyProfile
                 );
         this.smartOrderRouter = smartOrderRouter;
+        this.tokyoEquityRules = tokyoEquityRules;
     }
 
     public static ExecutionSimulator routed(
@@ -116,7 +122,85 @@ public final class ExecutionSimulator {
                 riskManager,
                 fillModel,
                 latencyProfile,
-                smartOrderRouter
+                smartOrderRouter,
+                null
+        );
+    }
+
+    public static ExecutionSimulator tokyo(
+            RiskManager riskManager,
+            FillModel fillModel,
+            TokyoEquityRules tokyoEquityRules
+    ) {
+        return tokyo(
+                riskManager,
+                fillModel,
+                LatencyProfile.deterministicBaseline(),
+                tokyoEquityRules
+        );
+    }
+
+    public static ExecutionSimulator tokyo(
+            RiskManager riskManager,
+            FillModel fillModel,
+            LatencyProfile latencyProfile,
+            TokyoEquityRules tokyoEquityRules
+    ) {
+        if (tokyoEquityRules == null) {
+            throw new IllegalArgumentException(
+                    "tokyoEquityRules are required"
+            );
+        }
+
+        return new ExecutionSimulator(
+                riskManager,
+                fillModel,
+                latencyProfile,
+                null,
+                tokyoEquityRules
+        );
+    }
+
+    public static ExecutionSimulator routedTokyo(
+            RiskManager riskManager,
+            FillModel fillModel,
+            SmartOrderRouter smartOrderRouter,
+            TokyoEquityRules tokyoEquityRules
+    ) {
+        return routedTokyo(
+                riskManager,
+                fillModel,
+                LatencyProfile.deterministicBaseline(),
+                smartOrderRouter,
+                tokyoEquityRules
+        );
+    }
+
+    public static ExecutionSimulator routedTokyo(
+            RiskManager riskManager,
+            FillModel fillModel,
+            LatencyProfile latencyProfile,
+            SmartOrderRouter smartOrderRouter,
+            TokyoEquityRules tokyoEquityRules
+    ) {
+        if (smartOrderRouter == null) {
+            throw new IllegalArgumentException(
+                    "smartOrderRouter is required"
+            );
+        }
+
+        if (tokyoEquityRules == null) {
+            throw new IllegalArgumentException(
+                    "tokyoEquityRules are required"
+            );
+        }
+
+        return new ExecutionSimulator(
+                riskManager,
+                fillModel,
+                latencyProfile,
+                smartOrderRouter,
+                tokyoEquityRules
         );
     }
 
@@ -130,6 +214,12 @@ public final class ExecutionSimulator {
                 replay,
                 algorithm
         );
+
+        if (tokyoEquityRules != null) {
+            tokyoEquityRules.validateParentOrder(
+                    parentOrder
+            );
+        }
 
         if (smartOrderRouter == null) {
             return runSingleVenue(
@@ -171,7 +261,15 @@ public final class ExecutionSimulator {
         long cumulativeVolume = 0L;
 
         List<MarketEvent> events =
-                replay.events();
+                eligibleEvents(
+                        replay.events(),
+                        parentOrder.symbol()
+                );
+
+        long eligibleTotalVolume =
+                events.stream()
+                        .mapToLong(MarketEvent::volume)
+                        .sum();
 
         DeterministicEventClock clock =
                 new DeterministicEventClock();
@@ -194,7 +292,7 @@ public final class ExecutionSimulator {
                             i,
                             events.size(),
                             cumulativeVolume,
-                            replay.totalVolume()
+                            eligibleTotalVolume
                     );
 
             long decisionTimeMs =
@@ -214,16 +312,24 @@ public final class ExecutionSimulator {
                 continue;
             }
 
+            int childQuantity =
+                    normalizedRequestedQuantity(
+                            decision.childQuantity(),
+                            parentOrder
+                                    .remainingQuantity()
+                    );
+
+            if (childQuantity <= 0) {
+                continue;
+            }
+
             ChildOrder childOrder =
-                    new ChildOrder(
+                    ChildOrder.routed(
                             parentOrder.orderId(),
                             parentOrder.symbol(),
+                            event.venue(),
                             parentOrder.side(),
-                            Math.min(
-                                    decision.childQuantity(),
-                                    parentOrder
-                                            .remainingQuantity()
-                            ),
+                            childQuantity,
                             decisionTimeMs,
                             decision.reason()
                     );
@@ -348,14 +454,18 @@ public final class ExecutionSimulator {
             }
 
             int requestedQuantity =
-                    Math.min(
+                    normalizedRequestedQuantity(
                             decision.childQuantity(),
                             parentOrder
                                     .remainingQuantity()
                     );
 
+            if (requestedQuantity <= 0) {
+                continue;
+            }
+
             RoutingDecision routingDecision =
-                    smartOrderRouter.route(
+                    routeSnapshot(
                             parentOrder.side(),
                             requestedQuantity,
                             snapshot
@@ -433,6 +543,12 @@ public final class ExecutionSimulator {
             List<RiskDecision> riskDecisions,
             PositionTracker positions
     ) {
+        if (tokyoEquityRules != null) {
+            tokyoEquityRules.validateChildOrder(
+                    childOrder
+            );
+        }
+
         long eventTimeMs =
                 event.timestampMs();
 
@@ -517,7 +633,7 @@ public final class ExecutionSimulator {
                 );
 
         FillOutcome fillOutcome =
-                fillModel.tryFill(
+                tryFillChild(
                         childOrder,
                         event,
                         strategyName,
@@ -601,7 +717,7 @@ public final class ExecutionSimulator {
         );
     }
 
-    private static List<List<MarketEvent>>
+    private List<List<MarketEvent>>
     snapshotsForSymbol(
             MarketDataReplay replay,
             String symbol
@@ -612,6 +728,19 @@ public final class ExecutionSimulator {
         for (MarketEvent event : replay.events()) {
             if (!event.symbol().equals(symbol)) {
                 continue;
+            }
+
+            if (tokyoEquityRules != null) {
+                if (
+                        !tokyoEquityRules
+                                .allowsExecution(event)
+                ) {
+                    continue;
+                }
+
+                tokyoEquityRules.validateMarketEvent(
+                        event
+                );
             }
 
             byTimestamp.computeIfAbsent(
@@ -742,6 +871,102 @@ public final class ExecutionSimulator {
         }
 
         return notional / totalVolume;
+    }
+
+    private List<MarketEvent> eligibleEvents(
+            List<MarketEvent> sourceEvents,
+            String symbol
+    ) {
+        if (tokyoEquityRules == null) {
+            return sourceEvents;
+        }
+
+        List<MarketEvent> eligible =
+                new ArrayList<>();
+
+        for (MarketEvent event : sourceEvents) {
+            if (!event.symbol().equals(symbol)) {
+                continue;
+            }
+
+            if (
+                    !tokyoEquityRules
+                            .allowsExecution(event)
+            ) {
+                continue;
+            }
+
+            tokyoEquityRules.validateMarketEvent(
+                    event
+            );
+
+            eligible.add(event);
+        }
+
+        return List.copyOf(eligible);
+    }
+
+    private int normalizedRequestedQuantity(
+            int requestedQuantity,
+            int remainingQuantity
+    ) {
+        if (tokyoEquityRules == null) {
+            return Math.min(
+                    requestedQuantity,
+                    remainingQuantity
+            );
+        }
+
+        return tokyoEquityRules
+                .normalizeBoardLotQuantity(
+                        requestedQuantity,
+                        remainingQuantity
+                );
+    }
+
+    private RoutingDecision routeSnapshot(
+            com.junwenzheng.execution.order.Side side,
+            int requestedQuantity,
+            List<MarketEvent> snapshot
+    ) {
+        if (tokyoEquityRules == null) {
+            return smartOrderRouter.route(
+                    side,
+                    requestedQuantity,
+                    snapshot
+            );
+        }
+
+        return smartOrderRouter.route(
+                side,
+                requestedQuantity,
+                snapshot,
+                tokyoEquityRules.boardLotSize()
+        );
+    }
+
+    private FillOutcome tryFillChild(
+            ChildOrder childOrder,
+            MarketEvent event,
+            String strategyName,
+            long fillTimeMs
+    ) {
+        if (tokyoEquityRules == null) {
+            return fillModel.tryFill(
+                    childOrder,
+                    event,
+                    strategyName,
+                    fillTimeMs
+            );
+        }
+
+        return fillModel.tryFill(
+                childOrder,
+                event,
+                strategyName,
+                fillTimeMs,
+                tokyoEquityRules.boardLotSize()
+        );
     }
 
     private static void cancelResidualParent(
