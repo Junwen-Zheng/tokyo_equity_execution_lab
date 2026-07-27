@@ -2,6 +2,8 @@
 
 A Java 21 trading-systems case study for equities execution technology roles.
 
+**Release:** 2.0.0
+
 This project is not an alpha-prediction toy. It focuses on the engineering layer that sits near a real algorithmic execution stack: market-data replay, parent/child order lifecycle, execution-algo scheduling, fill simulation, position/risk tracking, execution-quality metrics, and reproducible reports.
 
 The sample data in `data/sample_market_data.csv` is synthetic so the repository runs offline and remains reproducible. The parser expects a simple trade/quote replay format, so the same engine can be pointed at external public market data after normalisation.
@@ -53,9 +55,11 @@ src/main/java/com/junwenzheng/execution
 src/test/java/com/junwenzheng/execution
   JUnit unit, compatibility, and integration tests
 scripts/
-  run_demo.sh, run_tests.sh, compile.sh
+  build, test, demo, release verification, and JMH benchmark commands
+benchmarks/
+  separate Maven module for reproducible OpenJDK JMH measurements
 docs/
-  design notes, microstructure notes, strategy comparison, daily research logs
+  design, methodology, assumptions, reviewer report, and research logs
 ```
 
 ## Design principles
@@ -78,7 +82,7 @@ docs/
 
 ## Build and test
 
-The v2 development path uses Java 21, Maven, and JUnit 5.
+The 2.0.0 release uses Java 21, Maven, and JUnit 5.
 
 Run the complete test suite with:
 
@@ -127,3 +131,18 @@ bash scripts/run_benchmark_profile.sh
 Benchmark values are environment-specific and are not committed as stable
 performance claims. See `docs/benchmarking.md` for methodology and
 interpretation rules.
+
+## Release verification
+
+Run the complete release verification workflow:
+
+    bash scripts/verify_release.sh
+
+The verifier runs the automated tests, JMH smoke suite, deterministic demo,
+report checks, report cleanup, and source-diff validation.
+
+Release documentation:
+
+- `CHANGELOG.md`
+- `docs/reviewer_report.md`
+- `docs/reproducibility.md`
