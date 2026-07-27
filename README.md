@@ -99,3 +99,31 @@ bash scripts/run_demo.sh
 ```
 
 GitHub Actions runs `mvn -B verify` on every push to `main` and on pull requests.
+
+## JMH performance benchmarks
+
+The separate `benchmarks/` Maven project measures replay aggregation,
+four-venue routing, single-venue execution, and routed execution using OpenJDK
+JMH.
+
+Run the full configured suite:
+
+```bash
+bash scripts/run_benchmarks.sh
+```
+
+Run the short CI-compatible smoke suite:
+
+```bash
+bash scripts/run_benchmark_smoke.sh
+```
+
+Run with allocation and garbage-collection profiling:
+
+```bash
+bash scripts/run_benchmark_profile.sh
+```
+
+Benchmark values are environment-specific and are not committed as stable
+performance claims. See `docs/benchmarking.md` for methodology and
+interpretation rules.

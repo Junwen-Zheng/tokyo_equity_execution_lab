@@ -43,4 +43,4 @@ The project now supports TWAP, VWAP, and POV strategies. The sample run generate
 - Add a real external data adapter for public quote/trade feeds
 - Add multi-venue routing model and simple SOR decision rules
 - Replace the simple fill model with queue-position approximations
-- Add GC/allocation profiling with a proper JMH benchmark if Maven/Gradle is introduced
+- Extend JMH coverage to concurrent, multi-symbol execution workloads

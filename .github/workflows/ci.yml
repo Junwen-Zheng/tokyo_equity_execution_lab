@@ -29,5 +29,8 @@ jobs:
       - name: Verify Maven project
         run: mvn -B verify
 
+      - name: Smoke-test JMH harness
+        run: bash scripts/run_benchmark_smoke.sh
+
       - name: Check generated repository state
         run: git diff --exit-code
