@@ -14,6 +14,8 @@ import com.junwenzheng.execution.market.SyntheticMarketDataGenerator;
 import com.junwenzheng.execution.metrics.ExecutionMetrics;
 import com.junwenzheng.execution.metrics.LatencyBenchmark;
 import com.junwenzheng.execution.metrics.ReportWriter;
+import com.junwenzheng.execution.metrics.tca.TransactionCostBreakdown;
+import com.junwenzheng.execution.metrics.tca.TransactionCostReportWriter;
 import com.junwenzheng.execution.order.ParentOrder;
 import com.junwenzheng.execution.order.Side;
 
@@ -67,12 +69,58 @@ public final class App {
         ReportWriter.writeCsv(Path.of("reports/execution_summary.csv"), metrics);
         ReportWriter.writeMarkdown(Path.of("reports/execution_report.md"), metrics);
         ReportWriter.writeMicrostructureDiagnostics(Path.of("reports/microstructure_diagnostics.md"), replay);
+
+        List<TransactionCostBreakdown> transactionCosts =
+                TransactionCostReportWriter.analyse(
+                        results
+                );
+
+        TransactionCostReportWriter.writeSummaryCsv(
+                Path.of(
+                        "reports",
+                        "transaction_cost_summary.csv"
+                ),
+                transactionCosts
+        );
+
+        TransactionCostReportWriter.writeVenueCsv(
+                Path.of(
+                        "reports",
+                        "venue_cost_attribution.csv"
+                ),
+                transactionCosts
+        );
+
+        TransactionCostReportWriter.writeMarkdown(
+                Path.of(
+                        "reports",
+                        "transaction_cost_report.md"
+                ),
+                transactionCosts
+        );
+
         LatencyBenchmark.run(replay, 1_000);
 
         System.out.println("Execution report written to reports/execution_report.md");
+        System.out.println("TCA report written to reports/transaction_cost_report.md");
         for (ExecutionMetrics metric : metrics) {
             System.out.printf(java.util.Locale.US, "%s fillRate=%.2f%% arrivalSlip=%.2fbps vwapSlip=%.2fbps%n",
                     metric.strategy(), metric.fillRate() * 100.0, metric.slippageVsArrivalBps(), metric.slippageVsVwapBps());
+        }
+
+        for (
+                TransactionCostBreakdown breakdown :
+                transactionCosts
+        ) {
+            System.out.printf(
+                    java.util.Locale.US,
+                    "%s totalIS=%.2fbps delay=%.2f execution=%.2f opportunity=%.2f%n",
+                    breakdown.strategy(),
+                    breakdown.totalImplementationShortfallBps(),
+                    breakdown.delayCost(),
+                    breakdown.executionCost(),
+                    breakdown.opportunityCost()
+            );
         }
     }
 }
