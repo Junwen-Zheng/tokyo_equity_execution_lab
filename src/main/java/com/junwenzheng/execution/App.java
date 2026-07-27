@@ -7,6 +7,7 @@ import com.junwenzheng.execution.algo.TwapAlgorithm;
 import com.junwenzheng.execution.algo.VwapAlgorithm;
 import com.junwenzheng.execution.engine.ExecutionSimulator;
 import com.junwenzheng.execution.engine.FillModel;
+import com.junwenzheng.execution.engine.LatencyProfile;
 import com.junwenzheng.execution.engine.RiskManager;
 import com.junwenzheng.execution.engine.SimulationResult;
 import com.junwenzheng.execution.market.MarketDataReplay;
@@ -18,6 +19,11 @@ import com.junwenzheng.execution.metrics.tca.TransactionCostBreakdown;
 import com.junwenzheng.execution.metrics.tca.TransactionCostReportWriter;
 import com.junwenzheng.execution.order.ParentOrder;
 import com.junwenzheng.execution.order.Side;
+import com.junwenzheng.execution.routing.SmartOrderRouter;
+import com.junwenzheng.execution.scenario.ScenarioRunResult;
+import com.junwenzheng.execution.scenario.ScenarioStressReportWriter;
+import com.junwenzheng.execution.scenario.ScenarioStressRunner;
+import com.junwenzheng.execution.scenario.StressScenario;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -54,10 +60,14 @@ public final class App {
                 new PovAlgorithm(0.08, 1_000)
         );
 
-        ExecutionSimulator simulator = new ExecutionSimulator(
-                new RiskManager(2_000, 250_000.0),
-                new FillModel(0.12, 1.6)
-        );
+        LatencyProfile baselineLatency =
+                LatencyProfile
+                        .deterministicBaseline();
+
+        ExecutionSimulator simulator =
+                createSimulator(
+                        baselineLatency
+                );
 
         List<SimulationResult> results = new ArrayList<>();
         for (ExecutionAlgorithm algorithm : algorithms) {
@@ -99,10 +109,40 @@ public final class App {
                 transactionCosts
         );
 
+        List<ScenarioRunResult> stressResults =
+                ScenarioStressRunner.run(
+                        replay,
+                        StressScenario.standardSuite(),
+                        algorithms,
+                        "JPXDEMO",
+                        Side.BUY,
+                        parentQty,
+                        arrivalPrice,
+                        baselineLatency,
+                        App::createStressSimulator
+                );
+
+        ScenarioStressReportWriter.writeCsv(
+                Path.of(
+                        "reports",
+                        "stress_scenario_summary.csv"
+                ),
+                stressResults
+        );
+
+        ScenarioStressReportWriter.writeMarkdown(
+                Path.of(
+                        "reports",
+                        "stress_scenario_report.md"
+                ),
+                stressResults
+        );
+
         LatencyBenchmark.run(replay, 1_000);
 
         System.out.println("Execution report written to reports/execution_report.md");
         System.out.println("TCA report written to reports/transaction_cost_report.md");
+        System.out.println("Stress report written to reports/stress_scenario_report.md");
         for (ExecutionMetrics metric : metrics) {
             System.out.printf(java.util.Locale.US, "%s fillRate=%.2f%% arrivalSlip=%.2fbps vwapSlip=%.2fbps%n",
                     metric.strategy(), metric.fillRate() * 100.0, metric.slippageVsArrivalBps(), metric.slippageVsVwapBps());
@@ -122,5 +162,39 @@ public final class App {
                     breakdown.opportunityCost()
             );
         }
+    }
+
+    private static ExecutionSimulator createSimulator(
+            LatencyProfile latencyProfile
+    ) {
+        return new ExecutionSimulator(
+                new RiskManager(
+                        2_000,
+                        250_000.0
+                ),
+                new FillModel(
+                        0.12,
+                        1.6
+                ),
+                latencyProfile
+        );
+    }
+
+    private static ExecutionSimulator
+    createStressSimulator(
+            LatencyProfile latencyProfile
+    ) {
+        return ExecutionSimulator.routed(
+                new RiskManager(
+                        2_000,
+                        250_000.0
+                ),
+                new FillModel(
+                        0.12,
+                        1.6
+                ),
+                latencyProfile,
+                SmartOrderRouter.unconstrained()
+        );
     }
 }
