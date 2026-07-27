@@ -132,3 +132,69 @@ The records enforce four reconciliation invariants:
 - spread plus impact plus residual equals execution cost
 - filled shortfall plus opportunity cost equals total shortfall
 - venue shortfall sums to filled implementation shortfall
+
+## Deterministic scenario and stress framework
+
+The scenario layer transforms an immutable baseline replay before execution.
+Each scenario produces a new `MarketDataReplay`; the original events are not
+mutated.
+
+Supported transformations include:
+
+- spread widening around an unchanged midpoint
+- market-volume reduction
+- displayed queue-depth reduction
+- midpoint-return amplification
+- persistent price gaps from a deterministic replay threshold
+- venue removal
+- additive deterministic latency
+- combined multi-factor stress
+
+Price volatility is applied independently per symbol and venue. For each
+market stream, the stressed midpoint evolves as:
+
+    previous stressed midpoint
+        + volatility multiplier
+        × current original midpoint return
+
+Spread stress then widens bid and ask symmetrically around that midpoint.
+
+A price gap is applied from a timestamp derived from the configured replay
+fraction. All events at or after that timestamp receive the same multiplicative
+gap, including simultaneous events from different venues.
+
+Liquidity and queue depth are scaled separately and rounded down to integral
+quantities. Queue-depth scenarios affect execution through the routed
+simulator, because routing capacity is bounded by displayed queue depth.
+
+Each scenario and strategy combination receives:
+
+- a fresh parent order
+- a common arrival-price benchmark
+- an independently transformed replay
+- a scenario-adjusted latency profile
+- its own simulation and transaction-cost analysis result
+
+Stress reports compare each strategy against its corresponding baseline run.
+Reported deltas include fill-rate change and total implementation-shortfall
+change.
+
+The standard demonstration suite contains:
+
+- baseline
+- wide spread
+- thin liquidity
+- high volatility
+- price gap
+- queue depletion
+- adverse latency
+- combined severe stress
+
+Venue-outage transformation is supported programmatically but is not included
+in the single-venue demonstration because removing its only venue would leave
+no executable market events.
+
+Additional latency currently affects deterministic lifecycle timestamps only.
+The simulator does not yet map a delayed acknowledgement or fill to a later
+market snapshot, so latency-only stress can leave prices and fill quantities
+unchanged. This limitation is explicit in the reports and documentation.

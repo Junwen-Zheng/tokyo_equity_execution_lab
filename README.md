@@ -34,6 +34,8 @@ Outputs are written to `reports/`:
 - `transaction_cost_summary.csv`
 - `venue_cost_attribution.csv`
 - `transaction_cost_report.md`
+- `stress_scenario_summary.csv`
+- `stress_scenario_report.md`
 - `latency_benchmark.txt`
 
 ## Repository structure
@@ -69,6 +71,7 @@ docs/
 - The deterministic fill model approximates liquidity using event volume, displayed queue depth, participation limits, and configurable slippage. It is not an exchange matching engine.
 - Smart order routing uses snapshot liquidity and configured costs; it does not model message races, live order amendments, or order-book priority.
 - Transaction cost analysis uses replay midpoints and deterministic fill-model components. It is an attribution framework, not an estimate of realised broker or exchange accounting.
+- Stress scenarios are deterministic sensitivity tests, not probabilistic forecasts. Additional latency changes lifecycle timestamps but does not currently reprice an order against a later market snapshot.
 - Tokyo rules cover core session, auction, tick-size, and board-lot constraints but not the complete JPX rulebook.
 - The included demo continues to use relative timestamps and the generic simulator. Tokyo rules are enabled explicitly through the Tokyo simulator factories.
 
