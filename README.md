@@ -31,6 +31,9 @@ Outputs are written to `reports/`:
 - `execution_summary.csv`
 - `execution_report.md`
 - `microstructure_diagnostics.md`
+- `transaction_cost_summary.csv`
+- `venue_cost_attribution.csv`
+- `transaction_cost_report.md`
 - `latency_benchmark.txt`
 
 ## Repository structure
@@ -40,7 +43,7 @@ src/main/java/com/junwenzheng/execution
   algo/       TWAP, online/oracle VWAP, and POV scheduling
   engine/     Simulator, fill model, latency, risk, positions
   market/     Typed events, deterministic replay, synthetic data
-  metrics/    Execution-quality metrics and report generation
+  metrics/    Execution metrics, TCA, diagnostics, and reports
   order/      Parent/child lifecycle, fills, side, status
   routing/    Venue configuration and smart order routing
   rules/      Tokyo sessions, tick sizes, and board lots
@@ -65,6 +68,7 @@ docs/
 - Synthetic market data is used for reproducibility. External trade and quote data must be normalised before serious evaluation.
 - The deterministic fill model approximates liquidity using event volume, displayed queue depth, participation limits, and configurable slippage. It is not an exchange matching engine.
 - Smart order routing uses snapshot liquidity and configured costs; it does not model message races, live order amendments, or order-book priority.
+- Transaction cost analysis uses replay midpoints and deterministic fill-model components. It is an attribution framework, not an estimate of realised broker or exchange accounting.
 - Tokyo rules cover core session, auction, tick-size, and board-lot constraints but not the complete JPX rulebook.
 - The included demo continues to use relative timestamps and the generic simulator. Tokyo rules are enabled explicitly through the Tokyo simulator factories.
 

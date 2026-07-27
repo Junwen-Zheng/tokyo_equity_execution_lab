@@ -91,3 +91,44 @@ Legacy simulator factories retain their original unrestricted behaviour.
 For routed Tokyo execution, each venue exposes only complete-lot liquidity.
 The fill model also prevents odd-lot fills after participation and queue-ahead
 constraints have been applied.
+
+## Transaction cost analysis
+
+The TCA layer consumes an immutable `SimulationResult` after execution. It does
+not alter order state, fill generation, routing, or replay behaviour.
+
+For each fill, the analysis decomposes side-adjusted implementation shortfall
+into:
+
+1. **Delay cost** — movement from the parent arrival price to the fill's
+   contemporaneous reference midpoint.
+2. **Execution cost** — movement from that reference midpoint to the fill
+   price.
+3. **Spread cost** — the fill model's stored spread component converted from
+   basis points to currency cost.
+4. **Impact cost** — the fill model's stored impact component converted from
+   basis points to currency cost.
+5. **Residual execution cost** — execution cost less modeled spread and impact.
+
+For unfilled quantity, opportunity cost uses the final replay midpoint:
+
+    sideSign × (terminal midpoint - arrival price) × unfilled quantity
+
+Total implementation shortfall is:
+
+    filled shortfall + opportunity cost
+
+The basis-point denominator is the complete parent arrival notional, including
+unfilled quantity. This makes partially filled strategies directly comparable
+with fully filled strategies and prevents a low fill rate from appearing
+artificially inexpensive.
+
+Venue attribution groups fills by destination and reports quantity, executed
+notional, arrival-price shortfall, and venue shortfall in basis points.
+
+The records enforce four reconciliation invariants:
+
+- delay cost plus execution cost equals filled implementation shortfall
+- spread plus impact plus residual equals execution cost
+- filled shortfall plus opportunity cost equals total shortfall
+- venue shortfall sums to filled implementation shortfall
